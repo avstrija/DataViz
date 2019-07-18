@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Load D3 from site -->
+    <script src="http://d3js.org/d3.v5.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.3/jquery.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Rock+Salt&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Bungee+Shade&display=swap" rel="stylesheet">
+  </head>
+ 
+    <!-- CSS (Styling) -->
+    <style type="text/css">
+            /* Format X and Y Axis */
+            html {
+                /* background-image: url("background.jpg"); */
+                background-repeat: no-repeat;
+                background-size: 100%;
+            }
+            
+            body {
+                text-align: center;
+                height: 100vh;
+                margin: 0;
+                padding: 0;
+                background-color: rgba(26, 26, 26, 0.6);
+            }
+            h2 {
+                font-family: 'Bungee Shade', cursive;
+                font-size: 50px;
+                text-shadow: 1px 1px 2px black;
+                color: rgb(255, 200, 50);
+                margin-top:0;
+                margin-bottom:0;
+            }
+            .axis path,
+            .axis line {
+                font-family: 'Rock Salt', cursive;
+                fill: none;
+                stroke: rgb(255, 200, 50);
+                shape-rendering: crispEdges;
+                text-shadow: 1px 1px 2px black;
+            }
+            .axis text {
+                font-family: 'Rock Salt', cursive;
+                font-size: 15px;
+                fill: rgb(255, 200, 50);
+                text-shadow: 1px 1px 2px black;
+            }
+
+            .label,
+            .circle {
+                font-family: 'Bungee Shade', cursive;
+                fill: rgb(255, 200, 50);
+                text-shadow: 1px 1px 2px black;
+            }
+            svg {
+                margin-top:-3vh;
+            }
+
+            svg .tick line {
+            stroke: #9FAAAE;
+            stroke-width: 2;
+            stroke-opacity: 0.4;
+            }
+
+    </style>
+    <!-- End CSS (Styling) -->
+ 
+  <body>
+    <h2>Time to live counter</h2>
+    <h3></h3>
+    <div id="kyle"></div>
+    <svg>
+        <!-- <defs id="defs">
+            <pattern id="bullet" height="100%" width="100%" patternContentUnits="objectBoundingBox">
+                <image class="img" height="5" width ="8" preserveAspectRatio="none" xlink:href="image/bullet.png"></image>
+            </pattern>
+        </defs> -->
+    </svg>
+  <!-- Begin D3 Javascript -->
+  <script type="text/javascript">
+
+//ajax stuff
+    var timestamps = {};
+    var names = {};
+    $.ajax({
+        'async': false,
+        'global': false,
+        'url': "log.json",
+        'dataType': "json",
+        'success': function (data) {
+            data.players.forEach((player) => {
+                names[player.id]=player.name;
+            })
+            data.actions.forEach((event) => {
+                if (event.type === "kill") {
+                    var name = names[event.victim];
+                    if(!timestamps[name]) {
+                        timestamps[name] = [];
+                    }
+                    timestamps[name].push(event.time);
+                }
+            })
+            console.log(timestamps)
+        }
+    });
+
+
+    var data = [];
+        for(var key in timestamps) {
+        var val = timestamps[key];
+        data.push({
+        value: val,
+        //d3 looks for the word value
+        player: key
+        });
+        }
+        console.log(data)
+
+
+
+    // Setup data
+    var hardcodedata = [["kyle",2],["dasha",20],["kyle",30]]
+    var dataset = hardcodedata;  // Initialize empty array
+    console.log(dataset);
+    // Setup settings for graphic
+    var canvas_width = 950;
+    var canvas_height = 700;
+    var padding = 90;  // for chart edges
+    var margin = 100;
+    var width = 50;
+
+    // Create scale functions
+
+    var xScale = d3.scaleBand()  // xScale is width of graphic
+        .domain(data.map((d) => d.player))
+        .range([padding, canvas_width-padding]) // output range
+        .padding(0.6);
+
+    var yScale = d3.scaleLinear()  // yScale is height of graphic
+                    .domain([0, 120])
+                    .range([canvas_height - padding, padding*0.7]);  // remember y starts on top going down so we flip
+
+    // Define X axis
+    var xAxis = d3.axisBottom(xScale)
+                    .ticks(names.length);
+
+    // Define Y axis
+    var yAxis = d3.axisLeft(yScale)
+                    .ticks(6)
+                    .tickSize(-canvas_width + padding*2, 0, 0);
+    
+
+    // Create SVG element
+    var svg = d3.select("h3")  // This is where we put our vis
+        .append("svg")
+        .attr("width", canvas_width)
+        .attr("height", canvas_height)
+    console.log(data.value)
+    
+    function random_green() {
+    var o = Math.round, r = Math.random, s = 255;
+    return 'rgba(' + o(r()*s) + ',' + 255 + ',' + o(r()*s) + ',0.7)';
+    }
+
+    for (var i=0;i<data.length;++i) {
+        for(var j=0;j<data[i].value.length;++j) {
+            var deviation = Math.floor(Math.random()*35);
+            console.log(deviation)
+            var previousdeath = 0;
+            if (j!==0) {
+               previousdeath = data[i].value[j-1];
+            }
+            var current_player_and_value = [{player:data[i].player,value:(data[i].value[j]-previousdeath)}]
+            console.log(current_player_and_value)
+            svg.append('g')
+                .selectAll("dot")
+                .data(current_player_and_value)
+                .enter()
+                .append("circle")
+                .attr("cx", function (d) { return xScale(d.player)+deviation; } )
+                .attr("cy", function (d) { 
+                    console.log(d)
+                    return yScale(d.value); } )
+                .attr("r", 5)
+                .style("fill", random_green());
+        }
+    }
+    // Add to X axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + (canvas_height - padding) +")")
+        .call(xAxis)
+        .selectAll("text")
+         .attr("y", 25)
+         .attr("x", -15)
+         .attr("dy", ".55em")
+         .attr("transform", "rotate(-30)")
+         .style("text-anchor", "middle");
+
+
+    // text label for the x axis
+    svg.append("text")             
+        .attr("x", canvas_width/2)
+        .attr("y", canvas_height-5)
+        .style("text-anchor", "middle")
+        .text("Player Name")
+        .attr("class", "label");
+
+    // Add to Y axis
+    svg.append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + padding +",0)")
+        .call(yAxis);
+
+    // text label for the y axis
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 - margin.left)
+        .attr("x",0 - (canvas_height / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .text("Time spent alive (seconds)")
+        .attr("class", "label");
+ 
+  </script>
+  </body>
+  </html>
